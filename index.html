@@ -1,0 +1,135 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>NIGHT CIRCUIT</title>
+  <style>
+    :root { --teal: #2af5e4; --mag: #ff2bd6; }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html, body { width: 100%; height: 100%; overflow: hidden; background: #000; }
+    #app { position: fixed; inset: 0; }
+    canvas { display: block; }
+    #hud { position: fixed; inset: 0; pointer-events: none; font-family: 'Segoe UI', system-ui, sans-serif; color: #eaf6ff; user-select: none; }
+    .neon-t { color: var(--teal); text-shadow: 0 0 8px rgba(42,245,228,.9), 0 0 26px rgba(42,245,228,.45); }
+    .neon-m { color: var(--mag); text-shadow: 0 0 8px rgba(255,43,214,.9), 0 0 26px rgba(255,43,214,.45); }
+    #speedBox { position: absolute; right: 34px; bottom: 24px; text-align: right; transform: skewX(-8deg); }
+    #speedVal { font-size: 78px; font-weight: 800; font-style: italic; line-height: .9; letter-spacing: -2px; text-shadow: 0 0 14px rgba(42,245,228,.35); }
+    #speedUnit { font-size: 13px; letter-spacing: 7px; opacity: .75; font-weight: 600; }
+    #speedBar { height: 9px; border: 1px solid rgba(42,245,228,.45); background: rgba(8,16,20,.65); margin-top: 7px; position: relative; overflow: hidden; }
+    #speedFill { height: 100%; width: 0%; background: repeating-linear-gradient(90deg, var(--teal) 0 16px, rgba(8,16,20,0) 16px 22px); box-shadow: 0 0 10px rgba(42,245,228,.55); }
+    #speedBox.boosting #speedVal { text-shadow: 0 0 18px rgba(255,43,214,.95), 0 0 44px rgba(255,43,214,.5); color: #ffe9f9; }
+    #speedBox.boosting #speedFill { background: repeating-linear-gradient(90deg, var(--mag) 0 16px, rgba(8,16,20,0) 16px 22px); box-shadow: 0 0 12px rgba(255,43,214,.9); }
+    #speedBox.boosting #speedBar { border-color: var(--mag); }
+    #driftTag { position: absolute; right: 34px; bottom: 190px; font-size: 13px; letter-spacing: 8px; font-weight: 800; display: none; animation: driftblink .42s infinite alternate; }
+    @keyframes driftblink { from { opacity: .55; } to { opacity: 1; } }
+    #minimap { position: absolute; left: 34px; bottom: 152px; width: 208px; height: 186px; background: linear-gradient(160deg, rgba(10,20,28,.78), rgba(4,8,12,.84)); border: 1px solid rgba(42,245,228,.30); border-radius: 14px; box-shadow: 0 0 22px rgba(42,245,228,.10), inset 0 0 26px rgba(0,0,0,.55); overflow: hidden; }
+    #minimap svg { position: absolute; inset: 0; width: 100%; height: 100%; }
+    .mm-road-glow { fill: none; stroke: rgba(42,245,228,.28); stroke-width: 8; stroke-linejoin: round; stroke-linecap: round; }
+    .mm-road { fill: none; stroke: var(--teal); stroke-width: 2.4; stroke-linejoin: round; stroke-linecap: round; }
+    .mm-start { stroke: rgba(234,246,255,.75); stroke-width: 2.4; stroke-linecap: round; }
+    .mm-dot { position: absolute; left: 0; top: 0; width: 8px; height: 8px; border-radius: 50%; z-index: 2; will-change: transform; }
+    .mm-dot.player { width: 12px; height: 12px; background: #ffe9f9; border: 2.5px solid var(--mag); z-index: 3; animation: mm-pulse 1s infinite alternate; }
+    @keyframes mm-pulse { from { box-shadow: 0 0 7px rgba(255,43,214,.55); } to { box-shadow: 0 0 16px rgba(255,43,214,1); } }
+    #lb { position: absolute; top: 78px; left: 34px; width: 208px; height: 108px; padding: 0 12px; background: linear-gradient(160deg, rgba(10,20,28,.80), rgba(4,8,12,.86)); border: 1px solid rgba(42,245,228,.22); border-radius: 12px; box-shadow: 0 0 22px rgba(42,245,228,.08), inset 0 0 26px rgba(0,0,0,.5); overflow: hidden; }
+    .lb-row { position: absolute; left: 12px; right: 12px; top: 0; height: 27px; display: flex; align-items: center; gap: 8px; transition: transform .4s cubic-bezier(.22,1,.36,1); will-change: transform; }
+    .lb-pos { width: 24px; font-size: 12px; font-weight: 800; letter-spacing: 1px; color: rgba(234,246,255,.55); }
+    .lb-swatch { width: 10px; height: 10px; border-radius: 3px; flex: 0 0 auto; }
+    .lb-name { font-size: 15px; font-weight: 800; letter-spacing: 2px; flex: 1; white-space: nowrap; }
+    .lb-gap { font-size: 12px; font-weight: 700; color: var(--teal); opacity: .85; font-variant-numeric: tabular-nums; letter-spacing: 1px; }
+    .lb-row.me .lb-pos, .lb-row.me .lb-name { color: #fff; text-shadow: 0 0 8px rgba(42,245,228,.35); }
+    .lb-row.me .lb-gap { opacity: 1; }
+    #posBox { position: absolute; left: 34px; bottom: 22px; transform: skewX(-8deg); }
+    #posVal { font-size: 66px; font-weight: 800; font-style: italic; line-height: .9; }
+    #posSuf { font-size: 26px; font-weight: 800; }
+    #posDelta { position: absolute; left: 100%; bottom: 12px; margin-left: 8px; font-size: 22px; font-weight: 800; display: none; }
+    #posBox.pos-pop { animation: pospop .5s ease-out; }
+    @keyframes pospop { 0% { transform: skewX(-8deg) scale(1.35); } 100% { transform: skewX(-8deg) scale(1); } }
+    #lapBox { position: absolute; left: 36px; bottom: 116px; font-size: 19px; font-weight: 700; letter-spacing: 4px; }
+    #timeBox { position: absolute; top: 22px; left: 36px; font-size: 22px; font-weight: 700; letter-spacing: 2px; opacity: .92; font-variant-numeric: tabular-nums; }
+    #bestBox { position: absolute; top: 52px; left: 36px; font-size: 13px; letter-spacing: 2px; opacity: .6; font-variant-numeric: tabular-nums; }
+    #boostWrap { position: absolute; right: 34px; bottom: 148px; width: 232px; transform: skewX(-8deg); }
+    #boostLabel { font-size: 11px; letter-spacing: 6px; margin-bottom: 5px; opacity: .85; text-align: right; font-weight: 700; }
+    #boostBar { height: 10px; border: 1px solid rgba(42,245,228,.5); background: rgba(8,16,20,.6); }
+    #boostFill { height: 100%; width: 0%; background: linear-gradient(90deg, var(--teal), var(--mag)); box-shadow: 0 0 10px rgba(255,43,214,.7); }
+    #boostBar.ready { border-color: var(--mag); animation: pulse .5s infinite alternate; }
+    @keyframes pulse { from { box-shadow: 0 0 5px rgba(255,43,214,.4); } to { box-shadow: 0 0 18px rgba(255,43,214,1); } }
+    #countdown { position: absolute; top: 30%; left: 50%; font-size: 160px; font-weight: 800; font-style: italic; display: none; }
+    .cd-pop { animation: cdpop .85s ease-out; }
+    @keyframes cdpop { 0% { transform: translate(-50%,-50%) scale(1.7); opacity: 0; } 18% { opacity: 1; } 100% { transform: translate(-50%,-50%) scale(1); opacity: 1; } }
+    #center { position: absolute; top: 15%; left: 50%; transform: translateX(-50%); font-size: 30px; letter-spacing: 14px; font-weight: 800; display: none; }
+    #overlay { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; background: radial-gradient(ellipse at center, rgba(4,8,12,.3), rgba(2,4,8,.9)); }
+    #title { font-size: 92px; font-weight: 800; font-style: italic; letter-spacing: 4px; }
+    #subtitle { margin-top: 8px; font-size: 15px; letter-spacing: 13px; opacity: .8; font-weight: 600; }
+    #startHint { margin-top: 48px; font-size: 18px; letter-spacing: 7px; font-weight: 700; animation: blink 1.2s infinite; }
+    @keyframes blink { 50% { opacity: .25; } }
+    #finishStats { margin-top: 20px; font-size: 18px; letter-spacing: 3px; opacity: .9; line-height: 2; text-align: center; font-variant-numeric: tabular-nums; font-weight: 600; }
+    #pauseMenu { display: none; flex-direction: column; align-items: center; margin-top: 26px; pointer-events: auto; }
+    #pauseTitle { font-size: 64px; font-weight: 800; font-style: italic; letter-spacing: 10px; }
+    #pauseMenu .pbtn {
+      margin-top: 22px; min-width: 270px; padding: 13px 34px;
+      font: 700 16px/1 'Segoe UI', system-ui, sans-serif; letter-spacing: 6px;
+      color: #bfefff; background: rgba(8,16,22,.55); cursor: pointer;
+      border: 1px solid rgba(42,245,228,.55); border-radius: 4px;
+      text-shadow: 0 0 12px rgba(42,245,228,.8);
+      box-shadow: 0 0 18px rgba(42,245,228,.18), inset 0 0 14px rgba(42,245,228,.06);
+      transition: background .15s, box-shadow .15s, transform .15s;
+    }
+    #pauseMenu .pbtn:hover {
+      background: rgba(42,245,228,.16); transform: translateY(-1px);
+      box-shadow: 0 0 26px rgba(42,245,228,.45), inset 0 0 18px rgba(42,245,228,.12);
+    }
+    #pauseMenu .pbtn.mag {
+      color: #ffd9f4; border-color: rgba(255,43,214,.55);
+      text-shadow: 0 0 12px rgba(255,43,214,.8);
+      box-shadow: 0 0 18px rgba(255,43,214,.18), inset 0 0 14px rgba(255,43,214,.06);
+    }
+    #pauseMenu .pbtn.mag:hover {
+      background: rgba(255,43,214,.16);
+      box-shadow: 0 0 26px rgba(255,43,214,.45), inset 0 0 18px rgba(255,43,214,.12);
+    }
+    #pauseHint { margin-top: 28px; font-size: 12px; letter-spacing: 4px; opacity: .6; font-weight: 600; }
+    #controls { position: absolute; bottom: 26px; left: 50%; transform: translateX(-50%); font-size: 12px; letter-spacing: 2px; opacity: .55; white-space: nowrap; }
+    #vignette { position: fixed; inset: 0; pointer-events: none; background: radial-gradient(ellipse at center, transparent 52%, rgba(0,0,6,.6) 100%); }
+    #flash { position: fixed; inset: 0; pointer-events: none; background: #dff8ff; opacity: 0; transition: opacity .55s ease-out; }
+  </style>
+</head>
+<body>
+  <div id="app"></div>
+  <div id="vignette"></div>
+  <div id="flash"></div>
+  <div id="hud">
+    <div id="timeBox">00:00.00</div>
+    <div id="bestBox">BEST --:--.--</div>
+    <div id="lapBox">LAP 1<span style="opacity:.55">/3</span></div>
+    <div id="posBox"><span id="posVal" class="neon-t">4</span><span id="posSuf" class="neon-t">TH</span><span id="posDelta" class="neon-m"></span></div>
+    <div id="driftTag" class="neon-m">DRIFT</div>
+    <div id="minimap">
+      <svg id="mmSvg" viewBox="0 0 208 186">
+        <path id="mmRoadGlow" class="mm-road-glow" d="" />
+        <path id="mmRoad" class="mm-road" d="" />
+        <line id="mmStart" class="mm-start" x1="0" y1="0" x2="0" y2="0" />
+      </svg>
+    </div>
+    <div id="lb"></div>
+    <div id="boostWrap"><div id="boostLabel">NITRO</div><div id="boostBar"><div id="boostFill"></div></div></div>
+    <div id="speedBox"><div id="speedVal">0</div><div id="speedUnit">KM/H</div><div id="speedBar"><div id="speedFill"></div></div></div>
+    <div id="countdown"></div>
+    <div id="center"></div>
+    <div id="overlay">
+      <div id="title"><span class="neon-t">NIGHT</span> <span class="neon-m">CIRCUIT</span></div>
+      <div id="subtitle">NEON STREET GP — 3 LAPS — 3 RIVALS</div>
+      <div id="startHint">PRESS ENTER</div>
+      <div id="finishStats" style="display:none"></div>
+      <div id="pauseMenu">
+        <div id="pauseTitle"><span class="neon-m">PAUSED</span></div>
+        <button id="btnResume" class="pbtn">RESUME</button>
+        <button id="btnRestart" class="pbtn mag">RESTART</button>
+        <div id="pauseHint">ESC RESUME &nbsp;·&nbsp; R RESTART</div>
+      </div>
+      <div id="controls">WASD / ARROWS DRIVE · SPACE HANDBRAKE · SHIFT NITRO · R RESTART · M MUTE · P PERF · GAMEPAD OK</div>
+    </div>
+  </div>
+  <script type="module" src="/src/main.ts"></script>
+</body>
+</html>
