@@ -24,12 +24,30 @@ const TOUCH_CSS = `
 #touchUI .tb.mag { border-color: rgba(255,43,214,.5); color: #ffd9f4; }
 #touchUI .tb.on { background: rgba(42,245,228,.22); }
 #touchUI .tb.mag.on { background: rgba(255,43,214,.25); }
-#touchUI #tLeft { left: 26px; bottom: 110px; font-size: 24px; }
-#touchUI #tRight { left: 120px; bottom: 110px; font-size: 24px; }
-#touchUI #tGas { right: 26px; bottom: 96px; width: 92px; height: 92px; }
-#touchUI #tBrake { right: 132px; bottom: 130px; }
-#touchUI #tNitro { right: 40px; bottom: 210px; }
+#touchUI .tb.arrow { font-size: 30px; font-weight: 400; letter-spacing: 0; }
+#touchUI #tLeft { left: 22px; bottom: 104px; width: 84px; height: 84px; }
+#touchUI #tRight { left: 128px; bottom: 104px; width: 84px; height: 84px; }
+#touchUI #tGas { right: 22px; bottom: 88px; width: 96px; height: 96px; font-size: 34px; font-weight: 400; }
+#touchUI #tBrake { right: 122px; bottom: 158px; width: 70px; height: 70px; font-size: 24px; font-weight: 400; }
+#touchUI #tNitro { right: 34px; bottom: 206px; }
+#touchUI #tDrift { left: 26px; bottom: 214px; }
+
+/* desktop-reachable toggle chip for mobile mode */
+#mobChip {
+  position: fixed; top: 12px; left: 50%; transform: translateX(-50%); z-index: 35;
+  padding: 7px 14px; border-radius: 999px; cursor: pointer;
+  border: 1px solid rgba(42,245,228,.30); background: rgba(8,16,22,.55);
+  color: #7fb9c9; font: 700 10px/1 'Segoe UI', system-ui, sans-serif; letter-spacing: 2px;
+  pointer-events: auto; user-select: none; -webkit-user-select: none; touch-action: manipulation;
+}
+#mobChip.on {
+  color: #bfefff; border-color: rgba(42,245,228,.85);
+  background: rgba(42,245,228,.12); box-shadow: 0 0 16px rgba(42,245,228,.25);
+}
 `;
+
+/** Virtual keys the on-screen buttons hold — released wholesale when mobile mode turns off. */
+const VIRTUAL_KEYS = ['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Space', 'ShiftLeft'];
 
 export class Input {
   private keys = new Set<string>();
@@ -38,6 +56,8 @@ export class Input {
   private padSteer = 0;
   private rtVal = 0;
   private ltVal = 0;
+  private mobileMode = false;
+  private chip: HTMLElement | null = null;
 
   constructor() {
     window.addEventListener('keydown', (e) => {
@@ -47,7 +67,8 @@ export class Input {
     });
     window.addEventListener('keyup', (e) => this.keys.delete(e.code));
     window.addEventListener('blur', () => this.keys.clear());
-    if (this.isTouch()) this.buildTouchUI();
+    this.buildChip();
+    if (this.isTouch()) this.setMobileMode(true);
   }
 
   down(code: string): boolean { return this.keys.has(code); }
@@ -134,19 +155,53 @@ export class Input {
     return coarse || 'ontouchstart' in window;
   }
 
-  /** On-screen controls for touch devices; inject virtual key presses. */
+  /**
+   * Mobile mode on/off: shows/hides the on-screen arrow controls. Touch
+   * devices auto-enable it; anywhere else the 📱 MOBILE chip toggles it.
+   * Keyboard + gamepad stay live regardless, so nothing else changes.
+   */
+  setMobileMode(on: boolean): void {
+    if (on === this.mobileMode) return;
+    this.mobileMode = on;
+    document.body.classList.toggle('mobile-mode', on); // compact HUD hook (index.html)
+    if (on) this.buildTouchUI();
+    else this.destroyTouchUI();
+    this.chip?.classList.toggle('on', on);
+    const hint = document.getElementById('startHint');
+    if (hint) hint.textContent = on ? 'TAP TO START' : 'PRESS ENTER';
+  }
+
+  private destroyTouchUI(): void {
+    for (const code of VIRTUAL_KEYS) this.keys.delete(code);
+    document.getElementById('touchUI')?.remove();
+  }
+
+  /** Small toggle chip (top-center) so mobile mode works on any device. */
+  private buildChip(): void {
+    if (this.chip || document.getElementById('mobChip')) return;
+    if (!document.getElementById('mobile-mode-style')) {
+      const style = document.createElement('style');
+      style.id = 'mobile-mode-style';
+      style.textContent = TOUCH_CSS;
+      document.head.appendChild(style);
+    }
+    const chip = document.createElement('div');
+    chip.id = 'mobChip';
+    chip.textContent = '📱 MOBILE';
+    chip.addEventListener('click', () => this.setMobileMode(!this.mobileMode));
+    document.body.appendChild(chip);
+    this.chip = chip;
+  }
+
+  /** On-screen arrow controls for mobile mode; inject virtual key presses. */
   private buildTouchUI(): void {
     if (document.getElementById('touchUI')) return;
-    const style = document.createElement('style');
-    style.textContent = TOUCH_CSS;
-    document.head.appendChild(style);
-
     const ui = document.createElement('div');
     ui.id = 'touchUI';
 
-    const mk = (id: string, label: string, code: string, mag = false): void => {
+    const mk = (id: string, label: string, code: string, mag = false, arrow = false): void => {
       const b = document.createElement('div');
-      b.className = 'tb' + (mag ? ' mag' : '');
+      b.className = 'tb' + (mag ? ' mag' : '') + (arrow ? ' arrow' : '');
       b.id = id;
       b.textContent = label;
       const on = (e: PointerEvent) => {
@@ -164,14 +219,16 @@ export class Input {
       ui.appendChild(b);
     };
 
-    mk('tLeft', '◀', 'KeyA');
-    mk('tRight', '▶', 'KeyD');
-    mk('tGas', 'GAS', 'KeyW');
-    mk('tBrake', 'BRK', 'KeyS');
+    // arrow keys — left thumb steers, right thumb drives
+    mk('tLeft', '◀', 'ArrowLeft', false, true);
+    mk('tRight', '▶', 'ArrowRight', false, true);
+    mk('tGas', '▲', 'ArrowUp', false, true);
+    mk('tBrake', '▼', 'ArrowDown', false, true);
+    mk('tDrift', 'DRIFT', 'Space', true);   // handbrake: charges NITRO
     mk('tNitro', 'NITRO', 'ShiftLeft', true);
 
-    // any tap doubles as Enter (start / restart) — the game only consumes it
-    // in attract/finished phases, so taps while racing are harmless.
+    // any tap doubles as Enter (start / restart / resume) — the game only
+    // consumes it in attract/finished/paused phases, so racing taps are harmless.
     ui.addEventListener('pointerdown', () => this.queued.push('Enter'));
     document.body.appendChild(ui);
   }

@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
   <title>NIGHT CIRCUIT</title>
     <!-- Social sharing (WhatsApp, Discord, X, Telegram, etc.) -->
     <meta name="description" content="Drift through a neon night circuit - 3 laps, 3 AI rivals, one glowing wet road. A stylized Three.js racing game." />
@@ -111,6 +111,64 @@
     #controls { position: absolute; bottom: 26px; left: 50%; transform: translateX(-50%); font-size: 12px; letter-spacing: 2px; opacity: .55; white-space: nowrap; }
     #vignette { position: fixed; inset: 0; pointer-events: none; background: radial-gradient(ellipse at center, transparent 52%, rgba(0,0,6,.6) 100%); }
     #flash { position: fixed; inset: 0; pointer-events: none; background: #dff8ff; opacity: 0; transition: opacity .55s ease-out; }
+    /* --- Mobile mode: compact HUD that clears the on-screen arrow controls --- */
+    /* Auto: any touch device. Manual: body.mobile-mode set by Input.setMobileMode. */
+    @media (pointer: coarse) {
+      /* @compact-hud */
+      #controls { display: none; }
+      #timeBox { top: 10px; left: 12px; font-size: 15px; }
+      #bestBox { top: 32px; left: 12px; font-size: 10px; }
+      #lapBox { top: 14px; left: auto; right: 14px; bottom: auto; font-size: 14px; letter-spacing: 3px; }
+      #minimap { left: 12px; top: 54px; bottom: auto; width: 120px; height: 107px; }
+      #lb { top: 169px; left: 12px; width: 150px; height: 108px; padding: 0 8px; }
+      .lb-row { left: 8px; right: 8px; gap: 5px; }
+      .lb-name { font-size: 12px; letter-spacing: 1px; }
+      .lb-gap { font-size: 10px; }
+      .lb-pos { width: 18px; font-size: 10px; }
+      #boostWrap { top: 96px; right: 12px; bottom: auto; width: 150px; }
+      #speedBox { top: 132px; right: 12px; bottom: auto; }
+      #speedVal { font-size: 42px; letter-spacing: -1px; }
+      #speedUnit { font-size: 10px; letter-spacing: 4px; }
+      #driftTag { top: 212px; right: 14px; bottom: auto; font-size: 11px; letter-spacing: 5px; }
+      #countdown { font-size: 90px; }
+      #center { font-size: 20px; letter-spacing: 7px; }
+      #title { font-size: 44px; }
+      #subtitle { font-size: 10px; letter-spacing: 5px; margin-top: 10px; }
+      #startHint { font-size: 13px; margin-top: 28px; letter-spacing: 4px; }
+      #finishStats { font-size: 14px; }
+      #finishStats span[style*="font-size:64px"] { font-size: 42px !important; }
+      #posBox { left: 14px; }
+      #posVal { font-size: 44px; }
+      #posSuf { font-size: 18px; }
+    }
+    body.mobile-mode {
+      /* @compact-hud */
+      #controls { display: none; }
+      #timeBox { top: 10px; left: 12px; font-size: 15px; }
+      #bestBox { top: 32px; left: 12px; font-size: 10px; }
+      #lapBox { top: 14px; left: auto; right: 14px; bottom: auto; font-size: 14px; letter-spacing: 3px; }
+      #minimap { left: 12px; top: 54px; bottom: auto; width: 120px; height: 107px; }
+      #lb { top: 169px; left: 12px; width: 150px; height: 108px; padding: 0 8px; }
+      .lb-row { left: 8px; right: 8px; gap: 5px; }
+      .lb-name { font-size: 12px; letter-spacing: 1px; }
+      .lb-gap { font-size: 10px; }
+      .lb-pos { width: 18px; font-size: 10px; }
+      #boostWrap { top: 96px; right: 12px; bottom: auto; width: 150px; }
+      #speedBox { top: 132px; right: 12px; bottom: auto; }
+      #speedVal { font-size: 42px; letter-spacing: -1px; }
+      #speedUnit { font-size: 10px; letter-spacing: 4px; }
+      #driftTag { top: 212px; right: 14px; bottom: auto; font-size: 11px; letter-spacing: 5px; }
+      #countdown { font-size: 90px; }
+      #center { font-size: 20px; letter-spacing: 7px; }
+      #title { font-size: 44px; }
+      #subtitle { font-size: 10px; letter-spacing: 5px; margin-top: 10px; }
+      #startHint { font-size: 13px; margin-top: 28px; letter-spacing: 4px; }
+      #finishStats { font-size: 14px; }
+      #finishStats span[style*="font-size:64px"] { font-size: 42px !important; }
+      #posBox { left: 14px; }
+      #posVal { font-size: 44px; }
+      #posSuf { font-size: 18px; }
+    }
   </style>
 </head>
 <body>

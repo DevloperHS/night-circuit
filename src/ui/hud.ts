@@ -291,7 +291,9 @@ export class HUD {
     this.startHint.style.display = 'block';
     this.finishStats.style.display = 'none';
     this.pauseMenu.style.display = 'none';
-    this.startHint.textContent = 'PRESS ENTER';
+    this.startHint.textContent = window.matchMedia?.('(pointer: coarse)').matches
+      ? 'TAP TO START'
+      : 'PRESS ENTER';
   }
 
   showFinish(rank: number, total: number, best: number): void {
@@ -304,7 +306,7 @@ export class HUD {
     this.finishStats.innerHTML =
       `<span class="${rank === 1 ? 'neon-m' : 'neon-t'}" style="font-size:64px;font-weight:800;font-style:italic">${num}<span style="font-size:28px">${suf}</span> PLACE</span>` +
       `<br>TOTAL ${fmtTime(total)} · BEST LAP ${best > 0 ? fmtTime(best) : '--'}` +
-      `<br><span style="opacity:.7">PRESS R TO RESTART</span>`;
+      `<br><span style="opacity:.7">${window.matchMedia?.('(pointer: coarse)').matches ? 'TAP TO RESTART' : 'PRESS R TO RESTART'}</span>`;
     this.finishStats.style.display = 'block';
     this.pauseMenu.style.display = 'none';
   }
