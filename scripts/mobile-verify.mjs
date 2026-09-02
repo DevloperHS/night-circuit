@@ -43,37 +43,48 @@ await sleep(3500);
 
 const ui = await phone.evaluate(() => ({
   present: !!document.getElementById('touchUI'),
-  buttons: ['tLeft', 'tRight', 'tGas', 'tBrake', 'tNitro', 'tDrift']
+  parts: ['joy', 'joyKnob', 'bNitro', 'bBrake', 'bDrift']
     .filter((id) => !!document.getElementById(id)),
   hint: document.getElementById('startHint')?.textContent ?? '',
   pixelRatio: window.devicePixelRatio
 }));
 if (!ui.present) fail('touchUI missing on touch device');
-if (ui.buttons.length !== 6) fail('arrow buttons missing, only: ' + ui.buttons.join(','));
+if (ui.parts.length !== 5) fail('joystick/circles missing, only: ' + ui.parts.join(','));
 if (ui.hint !== 'TAP TO START') fail('start hint is "' + ui.hint + '"');
 console.log('PHONE UI:', JSON.stringify(ui));
 await phone.screenshot({ path: 'shots/mob-1-attract.png' });
 
-// tap = Enter → countdown → race; then hold ▲ and confirm the car moves
-const gas = await centerOf(phone, 'tGas');
-await phone.touchscreen.touchStart(gas.x, gas.y);
+// tap = Enter → countdown → race; then push joystick up (throttle) and hold
+const joy = await centerOf(phone, 'joy');
+await phone.touchscreen.touchStart(joy.x, joy.y);
 await phone.touchscreen.touchEnd();
 await waitRace(phone, 0.2);
-await phone.touchscreen.touchStart(gas.x, gas.y); // hold throttle
+await phone.touchscreen.touchStart(joy.x, joy.y);
+await phone.touchscreen.touchMove(joy.x, joy.y - 50);
 await waitRace(phone, 3.5);
 const speed = await phone.evaluate(() => +document.getElementById('speedVal').textContent || 0);
-if (speed <= 0) fail('no speed after holding ▲ (speed=' + speed + ')');
-else console.log('GAS OK — speed', speed, 'km/h');
-
-// ◀ registers a press while we roll
-const left = await centerOf(phone, 'tLeft');
-await phone.touchscreen.touchStart(left.x, left.y);
-await sleep(600);
-const pressed = await phone.evaluate(() => document.getElementById('tLeft').classList.contains('on'));
+if (speed <= 0) fail('no speed after pushing joystick up (speed=' + speed + ')');
+else console.log('JOY GAS OK — speed', speed, 'km/h');
 await phone.touchscreen.touchEnd();
-await phone.touchscreen.touchEnd(); // release ▲
-if (!pressed) fail('tLeft press state never registered');
-else console.log('ARROW PRESS OK');
+
+// joystick left = analog steering (knob offsets)
+await phone.touchscreen.touchStart(joy.x, joy.y);
+await phone.touchscreen.touchMove(joy.x - 50, joy.y);
+await sleep(500);
+const steered = await phone.evaluate(() =>
+  /calc\(-50%\s*-\s*[\d.]+px/.test(document.getElementById('joyKnob').style.transform || ''));
+await phone.touchscreen.touchEnd();
+if (!steered) fail('joystick steering never moved the knob');
+else console.log('JOY STEER OK');
+
+// circular NITRO registers a press while we roll
+const nitro = await centerOf(phone, 'bNitro');
+await phone.touchscreen.touchStart(nitro.x, nitro.y);
+await sleep(500);
+const pressed = await phone.evaluate(() => document.getElementById('bNitro').classList.contains('on'));
+await phone.touchscreen.touchEnd();
+if (!pressed) fail('bNitro press state never registered');
+else console.log('CIRCLE PRESS OK');
 await phone.screenshot({ path: 'shots/mob-2-racing.png' });
 await phone.close();
 

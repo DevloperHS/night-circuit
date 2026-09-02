@@ -1,6 +1,6 @@
 import puppeteer from 'puppeteer';
 const browser = await puppeteer.launch({ headless: true, args: ['--no-sandbox','--disable-dev-shm-usage','--use-gl=angle','--use-angle=swiftshader','--enable-unsafe-swiftshader'] });
-const ids = ['tLeft','tRight','tGas','tBrake','tNitro','tDrift'];
+const ids = ['joy','bNitro','bBrake','bDrift'];
 const rects = (page) => page.evaluate((ids) => ids.concat('posBox').map((id) => { const e = document.getElementById(id); if (!e) return null; const r = e.getBoundingClientRect(); return { id, x: r.x, y: r.y, w: r.width, h: r.height }; }), ids);
 const hit = (a, b) => a && b && a.x < b.x + b.w && b.x < a.x + a.w && a.y < b.y + b.h && b.y < a.y + a.h;
 const check = async (page, name, w, h) => {

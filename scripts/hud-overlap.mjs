@@ -4,12 +4,12 @@ const sizes = [[844, 390, 'lg-big'], [740, 360, 'lg-mid'], [667, 375, 'lg-se'], 
 for (const [w, h, name] of sizes) {
   const p = await browser.newPage();
   await p.setViewport({ width: w, height: h, hasTouch: true, isMobile: true });
-  await p.goto('http://localhost:5199', { waitUntil: 'domcontentloaded', timeout: 60000 }).catch(() => {});
+  await p.goto('http://localhost:5173', { waitUntil: 'domcontentloaded', timeout: 60000 }).catch(() => {});
   await new Promise(r => setTimeout(r, 3500));
   const report = await p.evaluate(() => {
     const box = id => { const el = document.getElementById(id); if (!el) return null; const r = el.getBoundingClientRect(); return { id, l: r.left, t: r.top, r: r.right, b: r.bottom }; };
     const hud = ['minimap', 'lb', 'boostWrap', 'speedBox', 'posBox', 'driftTag', 'lapBox', 'timeBox'].map(box).filter(Boolean);
-    const btns = ['tLeft', 'tRight', 'tGas', 'tBrake', 'tDrift', 'tNitro'].map(box).filter(Boolean);
+    const btns = ['joy', 'bNitro', 'bBrake', 'bDrift'].map(box).filter(Boolean);
     const inter = (a, b) => {
       const ox = Math.min(a.r, b.r) - Math.max(a.l, b.l);
       const oy = Math.min(a.b, b.b) - Math.max(a.t, b.t);

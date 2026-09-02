@@ -28,7 +28,6 @@ const TOUCH_CSS = `
   touch-action: none; user-select: none; -webkit-user-select: none; pointer-events: auto;
   transition: transform .08s ease, box-shadow .15s ease, background .15s ease;
 }
-#touchUI .tb.arrow { font-size: 30px; font-weight: 400; letter-spacing: 0; }
 #touchUI .tb.mag {
   border-color: rgba(255,43,214,.55); color: #ffd9f4;
   box-shadow: 0 0 18px rgba(255,43,214,.16), inset 0 0 14px rgba(255,43,214,.10);
@@ -43,24 +42,36 @@ const TOUCH_CSS = `
   background: linear-gradient(160deg, rgba(255,43,214,.42), rgba(255,43,214,.14));
   box-shadow: 0 0 26px rgba(255,43,214,.5), inset 0 0 16px rgba(255,43,214,.28);
 }
-/* Two tidy thumb rows — steer left, brake+gas right, action pills above.
-   Geometry fits a 390px-wide phone with clear gaps between the clusters. */
-#touchUI #tLeft  { left:  calc(14px + env(safe-area-inset-left));  bottom: calc(24px + env(safe-area-inset-bottom)); width: 80px; height: 80px; }
-#touchUI #tRight { left:  calc(100px + env(safe-area-inset-left)); bottom: calc(24px + env(safe-area-inset-bottom)); width: 80px; height: 80px; }
-#touchUI #tBrake { right: calc(120px + env(safe-area-inset-right)); bottom: calc(24px + env(safe-area-inset-bottom)); width: 68px; height: 68px; font-size: 24px; }
-#touchUI #tGas   { right: calc(14px + env(safe-area-inset-right));  bottom: calc(24px + env(safe-area-inset-bottom)); width: 98px; height: 98px; font-size: 36px; }
-#touchUI .tb.pill { width: 112px; height: 46px; }
-#touchUI #tDrift { right: calc(134px + env(safe-area-inset-right)); bottom: calc(136px + env(safe-area-inset-bottom)); }
-#touchUI #tNitro { right: calc(14px + env(safe-area-inset-right));  bottom: calc(136px + env(safe-area-inset-bottom)); }
-/* short landscape screens: shrink and pull the pills in so they clear the compact HUD */
+/* Joystick + action circles — translucent glass, racing-game style.
+   Left thumb: joystick (X steers analog, push up = gas, pull down = brake).
+   Right thumb: circular BOOST / BRAKE / DRIFT. Fits a 390px phone. */
+#touchUI #joy {
+  position: absolute; left: calc(18px + env(safe-area-inset-left)); bottom: calc(26px + env(safe-area-inset-bottom));
+  width: 124px; height: 124px; border-radius: 50%;
+  border: 1.5px solid rgba(235,248,255,.30);
+  background: radial-gradient(circle at 50% 38%, rgba(220,240,255,.16), rgba(10,18,26,.22));
+  box-shadow: 0 0 24px rgba(170,225,255,.12), inset 0 0 20px rgba(220,240,255,.10);
+  backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+  touch-action: none; user-select: none; -webkit-user-select: none; pointer-events: auto;
+}
+#touchUI #joyKnob {
+  position: absolute; left: 50%; top: 50%; width: 54px; height: 54px; border-radius: 50%;
+  transform: translate(-50%, -50%);
+  background: radial-gradient(circle at 50% 32%, rgba(242,250,255,.42), rgba(150,195,225,.18));
+  border: 1.5px solid rgba(242,250,255,.45);
+  box-shadow: 0 0 16px rgba(220,240,255,.30);
+  will-change: transform;
+}
+#touchUI #bNitro { right: calc(16px + env(safe-area-inset-right)); bottom: calc(128px + env(safe-area-inset-bottom)); width: 82px; height: 82px; font-size: 12px; }
+#touchUI #bBrake { right: calc(20px + env(safe-area-inset-right)); bottom: calc(26px + env(safe-area-inset-bottom)); width: 72px; height: 72px; font-size: 11px; }
+#touchUI #bDrift { right: calc(112px + env(safe-area-inset-right)); bottom: calc(58px + env(safe-area-inset-bottom)); width: 66px; height: 66px; font-size: 11px; }
+/* short landscape screens: shrink everything so it clears the compact HUD */
 @media (max-height: 500px) {
-  #touchUI #tLeft, #touchUI #tRight { width: 68px; height: 68px; }
-  #touchUI #tRight { left: calc(88px + env(safe-area-inset-left)); }
-  #touchUI #tGas { width: 80px; height: 80px; font-size: 28px; }
-  #touchUI #tBrake { right: calc(104px + env(safe-area-inset-right)); width: 60px; height: 60px; font-size: 20px; }
-  #touchUI .tb.pill { height: 40px; }
-  #touchUI #tDrift, #touchUI #tNitro { bottom: calc(108px + env(safe-area-inset-bottom)); }
-  #touchUI #tDrift { right: calc(134px + env(safe-area-inset-right)); }
+  #touchUI #joy { width: 84px; height: 84px; left: calc(12px + env(safe-area-inset-left)); bottom: calc(12px + env(safe-area-inset-bottom)); }
+  #touchUI #joyKnob { width: 40px; height: 40px; }
+  #touchUI #bNitro { width: 64px; height: 64px; right: calc(14px + env(safe-area-inset-right)); bottom: calc(78px + env(safe-area-inset-bottom)); font-size: 10px; }
+  #touchUI #bBrake { width: 56px; height: 56px; right: calc(14px + env(safe-area-inset-right)); bottom: calc(16px + env(safe-area-inset-bottom)); }
+  #touchUI #bDrift { width: 52px; height: 52px; right: calc(92px + env(safe-area-inset-right)); bottom: calc(38px + env(safe-area-inset-bottom)); }
 }
 `;
 
@@ -72,6 +83,7 @@ export class Input {
   private queued: string[] = [];
   private padPrev: boolean[] = [];
   private padSteer = 0;
+  private touchSteer = 0;
   private rtVal = 0;
   private ltVal = 0;
   private mobileMode = false;
@@ -163,7 +175,9 @@ export class Input {
   get steer(): number {
     const k = ((this.down('KeyD') || this.down('ArrowRight')) ? 1 : 0) -
       ((this.down('KeyA') || this.down('ArrowLeft')) ? 1 : 0);
-    return k !== 0 ? k : this.padSteer;
+    if (k !== 0) return k;
+    if (this.padSteer !== 0) return this.padSteer;
+    return this.touchSteer;
   }
   get handbrake(): boolean { return this.down('Space'); }
   get boostKey(): boolean { return this.down('ShiftLeft') || this.down('ShiftRight'); }
@@ -190,10 +204,11 @@ export class Input {
 
   private destroyTouchUI(): void {
     for (const code of VIRTUAL_KEYS) this.keys.delete(code);
+    this.touchSteer = 0;
     document.getElementById('touchUI')?.remove();
   }
 
-  /** On-screen arrow controls for mobile mode; inject virtual key presses. */
+  /** On-screen joystick + action circles for mobile mode; inject virtual key presses. */
   private buildTouchUI(): void {
     if (document.getElementById('touchUI')) return;
     if (!document.getElementById('mobile-mode-style')) {
@@ -205,9 +220,9 @@ export class Input {
     const ui = document.createElement('div');
     ui.id = 'touchUI';
 
-    const mk = (id: string, label: string, code: string, mag = false, arrow = false, pill = false): HTMLElement => {
+    const mk = (id: string, label: string, code: string, mag = false): HTMLElement => {
       const b = document.createElement('div');
-      b.className = 'tb' + (mag ? ' mag' : '') + (arrow ? ' arrow' : '') + (pill ? ' pill' : '');
+      b.className = 'tb' + (mag ? ' mag' : '');
       b.id = id;
       b.dataset.code = code;
       b.textContent = label;
@@ -215,18 +230,26 @@ export class Input {
       return b;
     };
 
-    // arrow keys — left thumb steers, right thumb drives
-    mk('tLeft', '◀', 'ArrowLeft', false, true);
-    mk('tRight', '▶', 'ArrowRight', false, true);
-    mk('tGas', '▲', 'ArrowUp', false, true);
-    mk('tBrake', '▼', 'ArrowDown', false, true);
-    mk('tDrift', 'DRIFT', 'Space', true, false, true);   // handbrake: charges NITRO
-    mk('tNitro', 'NITRO', 'ShiftLeft', true, false, true);
+    // action circles — right thumb (drift = handbrake: charges NITRO)
+    mk('bNitro', 'NITRO', 'ShiftLeft', true);
+    mk('bBrake', 'BRAKE', 'ArrowDown', false);
+    mk('bDrift', 'DRIFT', 'Space', true);
 
-    // Multi-touch + slide-safe input: capture on the container so a thumb can
-    // drag between buttons (e.g. ◀ → ▶) without losing the press, and two
-    // thumbs (steer + gas) work simultaneously.
+    // virtual joystick — left thumb: X steers (analog), up = gas, down = brake
+    const joy = document.createElement('div');
+    joy.id = 'joy';
+    const knob = document.createElement('div');
+    knob.id = 'joyKnob';
+    joy.appendChild(knob);
+    ui.appendChild(joy);
+
+    // Multi-touch: per-pointer routing — one pointer drives the joystick
+    // (analog steer + gas/brake keys), others press/slide the circles.
+    // Capture on the container so drags never lose the pointer.
     const active = new Map<number, HTMLElement>();
+    let joyId: number | null = null;
+    let joyRect: DOMRect | null = null;
+    const joyKeys = new Set<string>();
     const btnFrom = (e: PointerEvent): HTMLElement | null => {
       const el = document.elementFromPoint(e.clientX, e.clientY);
       return (el && el !== ui ? el.closest<HTMLElement>('.tb') : null) ?? null;
@@ -242,22 +265,58 @@ export class Input {
       b.classList.remove('on');
       this.keys.delete(b.dataset.code!);
     };
+    const joyKey = (code: string, on: boolean): void => {
+      const had = joyKeys.has(code);
+      if (on && !had) { joyKeys.add(code); this.keys.add(code); this.queued.push(code); }
+      else if (!on && had) { joyKeys.delete(code); this.keys.delete(code); }
+    };
+    const applyJoy = (e: PointerEvent): void => {
+      if (!joyRect) return;
+      const max = joyRect.width * 0.30;
+      let dx = e.clientX - (joyRect.x + joyRect.width / 2);
+      let dy = e.clientY - (joyRect.y + joyRect.height / 2);
+      const dist = Math.hypot(dx, dy);
+      if (dist > max) { dx = (dx / dist) * max; dy = (dy / dist) * max; }
+      knob.style.transform = `translate(calc(-50% + ${dx.toFixed(1)}px), calc(-50% + ${dy.toFixed(1)}px))`;
+      const dz = 0.24;
+      const nx = dx / max, ny = dy / max;
+      this.touchSteer = Math.abs(nx) > dz
+        ? Math.sign(nx) * Math.min(1, (Math.abs(nx) - dz) / (1 - dz))
+        : 0;
+      joyKey('ArrowUp', ny < -0.38);
+      joyKey('ArrowDown', ny > 0.38);
+    };
+    const resetJoy = (): void => {
+      knob.style.transform = 'translate(-50%, -50%)';
+      this.touchSteer = 0;
+      for (const code of joyKeys) this.keys.delete(code);
+      joyKeys.clear();
+    };
     ui.addEventListener('pointerdown', (e) => {
       e.preventDefault();
       try { ui.setPointerCapture(e.pointerId); } catch { /* detached */ }
-      const b = btnFrom(e);
-      if (b) press(b, e.pointerId);
+      const el = document.elementFromPoint(e.clientX, e.clientY);
+      if (el && el.closest('#joy') && joyId === null) {
+        joyId = e.pointerId;
+        joyRect = joy.getBoundingClientRect();
+        applyJoy(e);
+      } else {
+        const b = btnFrom(e);
+        if (b) press(b, e.pointerId);
+      }
       // any tap doubles as Enter (start / restart / resume) — the game only
       // consumes it in attract/finished/paused phases, so racing taps are harmless.
       this.queued.push('Enter');
     });
     ui.addEventListener('pointermove', (e) => {
+      if (e.pointerId === joyId) { applyJoy(e); return; }
       const cur = active.get(e.pointerId);
       if (!cur) return;
       const b = btnFrom(e);
       if (b && b !== cur) { release(cur); press(b, e.pointerId); }
     });
     const end = (e: PointerEvent): void => {
+      if (e.pointerId === joyId) { joyId = null; joyRect = null; resetJoy(); return; }
       const b = active.get(e.pointerId);
       if (b) { release(b); active.delete(e.pointerId); }
     };
