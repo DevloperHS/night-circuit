@@ -13,25 +13,55 @@ const RT = 7; // right trigger (analog throttle)
 const LT = 6; // left trigger (analog brake)
 
 const TOUCH_CSS = `
-#touchUI { position: fixed; inset: 0; z-index: 30; touch-action: none; }
-#touchUI .tb {
-  position: absolute; width: 74px; height: 74px; border-radius: 50%;
-  border: 1px solid rgba(42,245,228,.45); background: rgba(8,16,22,.35);
-  color: #bfefff; font: 700 11px/1 'Segoe UI', system-ui, sans-serif;
-  letter-spacing: 1px; display: flex; align-items: center; justify-content: center;
-  touch-action: none; user-select: none; -webkit-user-select: none; pointer-events: auto;
+#touchUI {
+  position: fixed; inset: 0; z-index: 30; touch-action: none;
+  -webkit-tap-highlight-color: transparent;
 }
-#touchUI .tb.mag { border-color: rgba(255,43,214,.5); color: #ffd9f4; }
-#touchUI .tb.on { background: rgba(42,245,228,.22); }
-#touchUI .tb.mag.on { background: rgba(255,43,214,.25); }
+#touchUI .tb {
+  position: absolute; display: flex; align-items: center; justify-content: center;
+  width: 64px; height: 64px; border-radius: 50%;
+  border: 1px solid rgba(42,245,228,.55);
+  background: linear-gradient(160deg, rgba(14,28,38,.55), rgba(5,11,16,.65));
+  box-shadow: 0 0 18px rgba(42,245,228,.14), inset 0 0 14px rgba(42,245,228,.08);
+  backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px);
+  color: #d8f7ff; font: 700 11px/1 'Segoe UI', system-ui, sans-serif; letter-spacing: 2px;
+  touch-action: none; user-select: none; -webkit-user-select: none; pointer-events: auto;
+  transition: transform .08s ease, box-shadow .15s ease, background .15s ease;
+}
 #touchUI .tb.arrow { font-size: 30px; font-weight: 400; letter-spacing: 0; }
-#touchUI #tLeft { left: 22px; bottom: 104px; width: 84px; height: 84px; }
-#touchUI #tRight { left: 128px; bottom: 104px; width: 84px; height: 84px; }
-#touchUI #tGas { right: 22px; bottom: 88px; width: 96px; height: 96px; font-size: 34px; font-weight: 400; }
-#touchUI #tBrake { right: 122px; bottom: 158px; width: 70px; height: 70px; font-size: 24px; font-weight: 400; }
-#touchUI #tNitro { right: 34px; bottom: 206px; }
-#touchUI #tDrift { left: 26px; bottom: 214px; }
-
+#touchUI .tb.mag {
+  border-color: rgba(255,43,214,.55); color: #ffd9f4;
+  box-shadow: 0 0 18px rgba(255,43,214,.16), inset 0 0 14px rgba(255,43,214,.10);
+}
+#touchUI .tb.pill { width: 118px; height: 48px; border-radius: 999px; }
+#touchUI .tb.on {
+  background: linear-gradient(160deg, rgba(42,245,228,.38), rgba(42,245,228,.14));
+  box-shadow: 0 0 26px rgba(42,245,228,.45), inset 0 0 16px rgba(42,245,228,.25);
+  transform: scale(.93);
+}
+#touchUI .tb.mag.on {
+  background: linear-gradient(160deg, rgba(255,43,214,.42), rgba(255,43,214,.14));
+  box-shadow: 0 0 26px rgba(255,43,214,.5), inset 0 0 16px rgba(255,43,214,.28);
+}
+/* Two tidy thumb rows — steer left, brake+gas right, action pills above.
+   Geometry fits a 390px-wide phone with clear gaps between the clusters. */
+#touchUI #tLeft  { left:  calc(14px + env(safe-area-inset-left));  bottom: calc(24px + env(safe-area-inset-bottom)); width: 80px; height: 80px; }
+#touchUI #tRight { left:  calc(100px + env(safe-area-inset-left)); bottom: calc(24px + env(safe-area-inset-bottom)); width: 80px; height: 80px; }
+#touchUI #tBrake { right: calc(120px + env(safe-area-inset-right)); bottom: calc(24px + env(safe-area-inset-bottom)); width: 68px; height: 68px; font-size: 24px; }
+#touchUI #tGas   { right: calc(14px + env(safe-area-inset-right));  bottom: calc(24px + env(safe-area-inset-bottom)); width: 98px; height: 98px; font-size: 36px; }
+#touchUI .tb.pill { width: 112px; height: 46px; }
+#touchUI #tDrift { right: calc(134px + env(safe-area-inset-right)); bottom: calc(136px + env(safe-area-inset-bottom)); }
+#touchUI #tNitro { right: calc(14px + env(safe-area-inset-right));  bottom: calc(136px + env(safe-area-inset-bottom)); }
+/* short landscape screens: shrink and pull the pills in so they clear the compact HUD */
+@media (max-height: 500px) {
+  #touchUI #tLeft, #touchUI #tRight { width: 68px; height: 68px; }
+  #touchUI #tRight { left: calc(88px + env(safe-area-inset-left)); }
+  #touchUI #tGas { width: 80px; height: 80px; font-size: 28px; }
+  #touchUI #tBrake { right: calc(104px + env(safe-area-inset-right)); width: 60px; height: 60px; font-size: 20px; }
+  #touchUI .tb.pill { height: 40px; }
+  #touchUI #tDrift, #touchUI #tNitro { bottom: calc(108px + env(safe-area-inset-bottom)); }
+  #touchUI #tDrift { right: calc(134px + env(safe-area-inset-right)); }
+}
 /* desktop-reachable toggle chip for mobile mode */
 #mobChip {
   position: fixed; top: 12px; left: 50%; transform: translateX(-50%); z-index: 35;
@@ -199,24 +229,14 @@ export class Input {
     const ui = document.createElement('div');
     ui.id = 'touchUI';
 
-    const mk = (id: string, label: string, code: string, mag = false, arrow = false): void => {
+    const mk = (id: string, label: string, code: string, mag = false, arrow = false, pill = false): HTMLElement => {
       const b = document.createElement('div');
-      b.className = 'tb' + (mag ? ' mag' : '') + (arrow ? ' arrow' : '');
+      b.className = 'tb' + (mag ? ' mag' : '') + (arrow ? ' arrow' : '') + (pill ? ' pill' : '');
       b.id = id;
+      b.dataset.code = code;
       b.textContent = label;
-      const on = (e: PointerEvent) => {
-        e.preventDefault();
-        try { b.setPointerCapture(e.pointerId); } catch { /* detached */ }
-        b.classList.add('on');
-        this.keys.add(code);
-        this.queued.push(code);
-      };
-      const off = () => { b.classList.remove('on'); this.keys.delete(code); };
-      b.addEventListener('pointerdown', on);
-      b.addEventListener('pointerup', off);
-      b.addEventListener('pointercancel', off);
-      b.addEventListener('lostpointercapture', off);
       ui.appendChild(b);
+      return b;
     };
 
     // arrow keys — left thumb steers, right thumb drives
@@ -224,12 +244,50 @@ export class Input {
     mk('tRight', '▶', 'ArrowRight', false, true);
     mk('tGas', '▲', 'ArrowUp', false, true);
     mk('tBrake', '▼', 'ArrowDown', false, true);
-    mk('tDrift', 'DRIFT', 'Space', true);   // handbrake: charges NITRO
-    mk('tNitro', 'NITRO', 'ShiftLeft', true);
+    mk('tDrift', 'DRIFT', 'Space', true, false, true);   // handbrake: charges NITRO
+    mk('tNitro', 'NITRO', 'ShiftLeft', true, false, true);
 
-    // any tap doubles as Enter (start / restart / resume) — the game only
-    // consumes it in attract/finished/paused phases, so racing taps are harmless.
-    ui.addEventListener('pointerdown', () => this.queued.push('Enter'));
+    // Multi-touch + slide-safe input: capture on the container so a thumb can
+    // drag between buttons (e.g. ◀ → ▶) without losing the press, and two
+    // thumbs (steer + gas) work simultaneously.
+    const active = new Map<number, HTMLElement>();
+    const btnFrom = (e: PointerEvent): HTMLElement | null => {
+      const el = document.elementFromPoint(e.clientX, e.clientY);
+      return (el && el !== ui ? el.closest<HTMLElement>('.tb') : null) ?? null;
+    };
+    const press = (b: HTMLElement, pointerId: number): void => {
+      active.set(pointerId, b);
+      b.classList.add('on');
+      const code = b.dataset.code!;
+      this.keys.add(code);
+      this.queued.push(code);
+    };
+    const release = (b: HTMLElement): void => {
+      b.classList.remove('on');
+      this.keys.delete(b.dataset.code!);
+    };
+    ui.addEventListener('pointerdown', (e) => {
+      e.preventDefault();
+      try { ui.setPointerCapture(e.pointerId); } catch { /* detached */ }
+      const b = btnFrom(e);
+      if (b) press(b, e.pointerId);
+      // any tap doubles as Enter (start / restart / resume) — the game only
+      // consumes it in attract/finished/paused phases, so racing taps are harmless.
+      this.queued.push('Enter');
+    });
+    ui.addEventListener('pointermove', (e) => {
+      const cur = active.get(e.pointerId);
+      if (!cur) return;
+      const b = btnFrom(e);
+      if (b && b !== cur) { release(cur); press(b, e.pointerId); }
+    });
+    const end = (e: PointerEvent): void => {
+      const b = active.get(e.pointerId);
+      if (b) { release(b); active.delete(e.pointerId); }
+    };
+    ui.addEventListener('pointerup', end);
+    ui.addEventListener('pointercancel', end);
+    ui.addEventListener('lostpointercapture', end);
     document.body.appendChild(ui);
   }
 }

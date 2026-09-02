@@ -137,7 +137,7 @@
       #startHint { font-size: 13px; margin-top: 28px; letter-spacing: 4px; }
       #finishStats { font-size: 14px; }
       #finishStats span[style*="font-size:64px"] { font-size: 42px !important; }
-      #posBox { left: 14px; }
+      #posBox { left: 14px; top: 288px; bottom: auto; }
       #posVal { font-size: 44px; }
       #posSuf { font-size: 18px; }
     }
@@ -165,9 +165,18 @@
       #startHint { font-size: 13px; margin-top: 28px; letter-spacing: 4px; }
       #finishStats { font-size: 14px; }
       #finishStats span[style*="font-size:64px"] { font-size: 42px !important; }
-      #posBox { left: 14px; }
+      #posBox { left: 14px; top: 288px; bottom: auto; }
       #posVal { font-size: 44px; }
       #posSuf { font-size: 18px; }
+    }
+    /* short screens (landscape phones): pos readout moves to bottom-center,
+       clear of both thumb clusters */
+    @media (max-height: 500px) and (pointer: coarse) {
+      #posBox { top: auto; bottom: 36px; left: 50%; transform: translateX(-50%) skewX(-8deg); }
+    }
+    body.mobile-mode #posBox { top: 288px; bottom: auto; }
+    @media (max-height: 500px) {
+      body.mobile-mode #posBox { top: auto; bottom: 36px; left: 50%; transform: translateX(-50%) skewX(-8deg); }
     }
   </style>
 </head>
