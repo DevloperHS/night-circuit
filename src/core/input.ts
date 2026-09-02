@@ -62,18 +62,6 @@ const TOUCH_CSS = `
   #touchUI #tDrift, #touchUI #tNitro { bottom: calc(108px + env(safe-area-inset-bottom)); }
   #touchUI #tDrift { right: calc(134px + env(safe-area-inset-right)); }
 }
-/* desktop-reachable toggle chip for mobile mode */
-#mobChip {
-  position: fixed; top: 12px; left: 50%; transform: translateX(-50%); z-index: 35;
-  padding: 7px 14px; border-radius: 999px; cursor: pointer;
-  border: 1px solid rgba(42,245,228,.30); background: rgba(8,16,22,.55);
-  color: #7fb9c9; font: 700 10px/1 'Segoe UI', system-ui, sans-serif; letter-spacing: 2px;
-  pointer-events: auto; user-select: none; -webkit-user-select: none; touch-action: manipulation;
-}
-#mobChip.on {
-  color: #bfefff; border-color: rgba(42,245,228,.85);
-  background: rgba(42,245,228,.12); box-shadow: 0 0 16px rgba(42,245,228,.25);
-}
 `;
 
 /** Virtual keys the on-screen buttons hold — released wholesale when mobile mode turns off. */
@@ -87,7 +75,6 @@ export class Input {
   private rtVal = 0;
   private ltVal = 0;
   private mobileMode = false;
-  private chip: HTMLElement | null = null;
 
   constructor() {
     window.addEventListener('keydown', (e) => {
@@ -97,7 +84,8 @@ export class Input {
     });
     window.addEventListener('keyup', (e) => this.keys.delete(e.code));
     window.addEventListener('blur', () => this.keys.clear());
-    this.buildChip();
+    // Auto-detect: touch devices get the on-screen controls + compact HUD;
+    // desktop never does. Keyboard + gamepad stay live regardless.
     if (this.isTouch()) this.setMobileMode(true);
   }
 
@@ -187,7 +175,7 @@ export class Input {
 
   /**
    * Mobile mode on/off: shows/hides the on-screen arrow controls. Touch
-   * devices auto-enable it; anywhere else the 📱 MOBILE chip toggles it.
+   * devices auto-enable it (see constructor); no manual toggle exists.
    * Keyboard + gamepad stay live regardless, so nothing else changes.
    */
   setMobileMode(on: boolean): void {
@@ -196,7 +184,6 @@ export class Input {
     document.body.classList.toggle('mobile-mode', on); // compact HUD hook (index.html)
     if (on) this.buildTouchUI();
     else this.destroyTouchUI();
-    this.chip?.classList.toggle('on', on);
     const hint = document.getElementById('startHint');
     if (hint) hint.textContent = on ? 'TAP TO START' : 'PRESS ENTER';
   }
@@ -206,26 +193,15 @@ export class Input {
     document.getElementById('touchUI')?.remove();
   }
 
-  /** Small toggle chip (top-center) so mobile mode works on any device. */
-  private buildChip(): void {
-    if (this.chip || document.getElementById('mobChip')) return;
+  /** On-screen arrow controls for mobile mode; inject virtual key presses. */
+  private buildTouchUI(): void {
+    if (document.getElementById('touchUI')) return;
     if (!document.getElementById('mobile-mode-style')) {
       const style = document.createElement('style');
       style.id = 'mobile-mode-style';
       style.textContent = TOUCH_CSS;
       document.head.appendChild(style);
     }
-    const chip = document.createElement('div');
-    chip.id = 'mobChip';
-    chip.textContent = '📱 MOBILE';
-    chip.addEventListener('click', () => this.setMobileMode(!this.mobileMode));
-    document.body.appendChild(chip);
-    this.chip = chip;
-  }
-
-  /** On-screen arrow controls for mobile mode; inject virtual key presses. */
-  private buildTouchUI(): void {
-    if (document.getElementById('touchUI')) return;
     const ui = document.createElement('div');
     ui.id = 'touchUI';
 

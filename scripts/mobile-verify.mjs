@@ -1,9 +1,8 @@
 /**
  * Mobile-mode verification rig (dev tooling, not part of the game).
- * Emulates a phone: checks the on-screen arrow controls, tap-to-start,
- * and that holding ▲ actually drives the car. Then checks the desktop
- * 📱 MOBILE toggle chip (on/off) and that keyboard driving still works
- * while mobile mode is active.
+ * Emulates a phone: checks auto-detected on-screen arrow controls, tap-to-start,
+ * and that holding ▲ actually drives the car. Then checks that desktop has NO
+ * touch UI (auto-detection correct) and that keyboard driving still works.
  */
 import puppeteer from 'puppeteer';
 import { mkdirSync } from 'node:fs';
@@ -79,25 +78,21 @@ await phone.screenshot({ path: 'shots/mob-2-racing.png' });
 await phone.close();
 
 // ---------------- desktop (no touch) ----------------
+// Auto-detection: no chip, no touch UI, no compact HUD on desktop —
+// and keyboard driving works untouched.
 const desk = await browser.newPage();
 await desk.setViewport({ width: 1280, height: 720, deviceScaleFactor: 1 });
 await desk.goto('http://localhost:5173', { waitUntil: 'networkidle0', timeout: 60000 });
 await sleep(2500);
 
 if (await desk.evaluate(() => !!document.getElementById('touchUI'))) {
-  fail('touchUI visible on desktop before toggle');
+  fail('touchUI visible on desktop (auto-detect false positive)');
 }
-if (!(await desk.evaluate(() => !!document.getElementById('mobChip')))) {
-  fail('📱 MOBILE chip missing on desktop');
+if (await desk.evaluate(() => !!document.getElementById('mobChip'))) {
+  fail('📱 MOBILE chip still exists — should be removed');
 }
-// chip ON → arrow controls appear, keyboard still drives
-await desk.click('#mobChip');
-await sleep(300);
-if (!(await desk.evaluate(() => !!document.getElementById('touchUI')))) {
-  fail('touchUI did not appear after chip toggle');
-}
-if ((await desk.evaluate(() => document.getElementById('startHint').textContent)) !== 'TAP TO START') {
-  fail('hint not updated after chip toggle');
+if ((await desk.evaluate(() => document.getElementById('startHint').textContent)) !== 'PRESS ENTER') {
+  fail('desktop hint should be PRESS ENTER');
 }
 await desk.keyboard.press('Enter');
 // SwiftShader dilates game time — poll the race timer before judging speed
@@ -111,18 +106,10 @@ await waitDeskRace(0.2);
 await desk.keyboard.down('w');
 await waitDeskRace(3.5);
 const dSpeed = await desk.evaluate(() => +document.getElementById('speedVal').textContent || 0);
-if (dSpeed <= 0) fail('keyboard driving broken while mobile mode on (speed=' + dSpeed + ')');
-else console.log('DESKTOP TOGGLE + KEYBOARD OK — speed', dSpeed, 'km/h');
+if (dSpeed <= 0) fail('keyboard driving broken on desktop (speed=' + dSpeed + ')');
+else console.log('DESKTOP AUTO-DETECT + KEYBOARD OK — speed', dSpeed, 'km/h');
 await desk.screenshot({ path: 'shots/mob-3-desktop-mobilemode.png' });
-// chip OFF → controls gone, hint restored
 await desk.keyboard.up('w');
-await desk.click('#mobChip');
-await sleep(300);
-if (await desk.evaluate(() => !!document.getElementById('touchUI'))) {
-  fail('touchUI still present after toggle off');
-} else {
-  console.log('TOGGLE OFF OK');
-}
 await desk.close();
 
 await browser.close();
